@@ -36,12 +36,17 @@ java_library_static {
     name: "android-key-attestation",
     visibility: [
         "//cts/tests/tests/keystore",
+        "//cts/common/device-side/device-info",
     ],
+    min_sdk_version: "31",
+    dxflags: ["--multi-dex"],
     srcs: ["server/src/main/java/**/*.java"],
     exclude_srcs: ["server/src/main/java/**/KeyAttestationExample.java"],
     sdk_version: "current",
-    libs: [
+    static_libs: [
         "bouncycastle-unbundled",
+    ],
+    libs: [
         "wycheproof-gson",
     ],
 }
