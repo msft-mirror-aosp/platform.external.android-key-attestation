@@ -30,6 +30,7 @@ import static com.google.android.attestation.Constants.UNIQUE_ID_INDEX;
 
 import java.io.IOException;
 import java.security.cert.X509Certificate;
+import java.util.List;
 import org.bouncycastle.asn1.ASN1Encodable;
 import org.bouncycastle.asn1.ASN1Enumerated;
 import org.bouncycastle.asn1.ASN1InputStream;
@@ -96,10 +97,23 @@ public class ParsedAttestationRecord {
     this.teeEnforced = teeEnforced;
   }
 
-  public static ParsedAttestationRecord createParsedAttestationRecord(X509Certificate cert)
+  public static ParsedAttestationRecord createParsedAttestationRecord(List<X509Certificate> certs)
       throws IOException {
-    ASN1Sequence extensionData = extractAttestationSequence(cert);
-    return new ParsedAttestationRecord(extensionData);
+
+    // Parse the attestation record that is closest to the root. This prevents an adversary from
+    // attesting an attestation record of their choice with an otherwise trusted chain using the
+    // following attack:
+    // 1) having the TEE attest a key under the adversary's control,
+    // 2) using that key to sign a new leaf certificate with an attestation extension that has their chosen attestation record, then
+    // 3) appending that certificate to the original certificate chain.
+    for (int i = certs.size() - 1; i >= 0; i--) {
+      byte[] attestationExtensionBytes = certs.get(i).getExtensionValue(KEY_DESCRIPTION_OID);
+      if (attestationExtensionBytes != null && attestationExtensionBytes.length != 0) {
+        return new ParsedAttestationRecord(extractAttestationSequence(attestationExtensionBytes));
+      }
+    }
+
+    throw new IllegalArgumentException("Couldn't find the keystore attestation extension data.");
   }
 
   public static ParsedAttestationRecord create(ASN1Sequence extensionData) {
@@ -151,13 +165,8 @@ public class ParsedAttestationRecord {
     throw new IllegalArgumentException("Invalid security level.");
   }
 
-  private static ASN1Sequence extractAttestationSequence(X509Certificate attestationCert)
+  private static ASN1Sequence extractAttestationSequence(byte[] attestationExtensionBytes)
       throws IOException {
-    byte[] attestationExtensionBytes = attestationCert.getExtensionValue(KEY_DESCRIPTION_OID);
-    if (attestationExtensionBytes == null || attestationExtensionBytes.length == 0) {
-      throw new IllegalArgumentException("Couldn't find the keystore attestation extension data.");
-    }
-
     ASN1Sequence decodedSequence;
     try (ASN1InputStream asn1InputStream = new ASN1InputStream(attestationExtensionBytes)) {
       // The extension contains one object, a sequence, in the
