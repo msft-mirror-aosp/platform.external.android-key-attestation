@@ -45,6 +45,8 @@ java_library_static {
     sdk_version: "current",
     static_libs: [
         "bouncycastle-unbundled",
+	"error_prone_annotations",
+	"guava",
     ],
     libs: [
         "wycheproof-gson",
