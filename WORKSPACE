@@ -34,6 +34,11 @@ maven_install(
         # Gson used for decoding certificate status list
         "com.google.code.gson:gson:2.8.5",
 
+        "com.google.guava:guava:27.0.1-android",
+        "com.google.errorprone:error_prone_annotations:2.3.1",
+
+        "com.squareup.okhttp3:okhttp:4.10.0",
+
         # Test libraries
         "junit:junit:4.12",
         "com.google.truth:truth:1.0",
