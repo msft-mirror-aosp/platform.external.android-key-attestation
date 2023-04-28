@@ -18,8 +18,7 @@ package com.google.android.attestation;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-
-import java.io.File;
+import java.io.ByteArrayInputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -27,11 +26,8 @@ import java.io.Reader;
 import java.math.BigInteger;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.file.Files;
 import java.util.HashMap;
-import okhttp3.Cache;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
 
 
 /**
@@ -40,12 +36,6 @@ import okhttp3.Response;
 public class CertificateRevocationStatus {
 
   private static final String STATUS_URL = "https://android.googleapis.com/attestation/status";
-  private static final String CACHE_PATH = "httpcache";
-  private static final Cache CACHE = new Cache(new File(CACHE_PATH), 10 * 1024 * 1024);
-  private static final OkHttpClient CLIENT = new OkHttpClient.Builder()
-          .cache(CACHE)
-          .build();
-
   public final Status status;
   public final Reason reason;
   public final String comment;
@@ -104,13 +94,10 @@ public class CertificateRevocationStatus {
       throw new IllegalStateException(e);
     }
 
-    Request request = new Request.Builder()
-            .url(url)
-            .build();
+    InputStreamReader statusListReader = new InputStreamReader(url.openStream());
 
-    try (Response response = CLIENT.newCall(request).execute()) {
-      return decodeStatus(serialNumber, response.body().charStream());
-    }
+    return decodeStatus(serialNumber, statusListReader);
+
   }
 
   private static CertificateRevocationStatus decodeStatus(String serialNumber,
