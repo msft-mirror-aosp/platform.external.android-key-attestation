@@ -26,10 +26,8 @@ import static com.google.common.truth.Truth8.assertThat;
 import static org.junit.Assert.fail;
 
 import com.google.common.collect.ImmutableSet;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.time.Instant;
-import java.util.Set;
 
 import org.bouncycastle.asn1.ASN1Encodable;
 import org.bouncycastle.asn1.ASN1Sequence;
@@ -113,6 +111,7 @@ public class AuthorizationListTest {
     assertThat(authorizationList.attestationApplicationIdBytes)
         .hasValue(EXPECTED_SW_ATTESTATION_APPLICATION_ID_BYTES);
     assertThat(authorizationList.individualAttestation).isFalse();
+    assertThat(authorizationList.identityCredentialKey).isFalse();
   }
 
   @Test
@@ -135,15 +134,17 @@ public class AuthorizationListTest {
     assertThat(authorizationList.vendorPatchLevel).hasValue(EXPECTED_TEE_VENDOR_PATCH_LEVEL);
     assertThat(authorizationList.bootPatchLevel).hasValue(EXPECTED_TEE_BOOT_PATCH_LEVEL);
     assertThat(authorizationList.individualAttestation).isFalse();
+    assertThat(authorizationList.identityCredentialKey).isFalse();
   }
 
   @Test
   public void testUserAuthTypeToEnum() {
-    assertThat(userAuthTypeToEnum(0L)).isEqualTo(Set.of(USER_AUTH_TYPE_NONE));
-    assertThat(userAuthTypeToEnum(1L)).isEqualTo(Set.of(PASSWORD));
-    assertThat(userAuthTypeToEnum(2L)).isEqualTo(Set.of(FINGERPRINT));
-    assertThat(userAuthTypeToEnum(3L)).isEqualTo(Set.of(PASSWORD, FINGERPRINT));
-    assertThat(userAuthTypeToEnum(UINT32_MAX)).isEqualTo(Set.of(PASSWORD, FINGERPRINT, USER_AUTH_TYPE_ANY));
+    assertThat(userAuthTypeToEnum(0L)).isEqualTo(ImmutableSet.of(USER_AUTH_TYPE_NONE));
+    assertThat(userAuthTypeToEnum(1L)).isEqualTo(ImmutableSet.of(PASSWORD));
+    assertThat(userAuthTypeToEnum(2L)).isEqualTo(ImmutableSet.of(FINGERPRINT));
+    assertThat(userAuthTypeToEnum(3L)).isEqualTo(ImmutableSet.of(PASSWORD, FINGERPRINT));
+    assertThat(userAuthTypeToEnum(UINT32_MAX)).isEqualTo(ImmutableSet.of(PASSWORD, FINGERPRINT,
+            USER_AUTH_TYPE_ANY));
 
 
     try {
@@ -168,6 +169,24 @@ public class AuthorizationListTest {
             ATTESTATION_VERSION);
 
     assertThat(authorizationList.individualAttestation).isTrue();
+  }
+
+  private static final String EXTENTION_DATA_WITH_ID_CREDENTIAL_KEY =
+          "MIH0oQgxBgIBAgIBA6IDAgEBowQCAggApQUxAwIBBKYIMQYCAQMCAQW/" +
+          "gUgFAgMBAAG/g3cCBQC/hT4DAgEAv4VATDBKBCAAAAAAAAAAAAAAAAAA" +
+          "AAAAAAAAAAAAAAAAAAAAAAAAAAEBAAoBAgQgEvR7Lf1t9nD6P2qyUmgi" +
+          "Q0mG+RixYnglj2TaAMZmHn2/hUEFAgMBrbC/hUIFAgMDFRi/hUYIBAZn" +
+          "b29nbGW/hUcHBAVzYXJnb7+FSAcEBXNhcmdvv4VMCAQGR29vZ2xlv4VN" +
+          "CgQIUGl4ZWwgM2G/hU4GAgQBND1lv4VPBgIEATQ9Zb+FUQIFAA==";
+
+  @Test
+  public void testCanParseIdentityCredentialTag() throws IOException {
+    AuthorizationList authorizationList =
+            AuthorizationList.createAuthorizationList(
+                    getEncodableAuthorizationList(EXTENTION_DATA_WITH_ID_CREDENTIAL_KEY),
+                    ATTESTATION_VERSION);
+
+    assertThat(authorizationList.identityCredentialKey).isTrue();
   }
 
   @Test
