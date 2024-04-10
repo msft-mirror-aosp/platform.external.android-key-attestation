@@ -32,11 +32,13 @@ import static com.google.android.attestation.Constants.KM_TAG_ATTESTATION_ID_MAN
 import static com.google.android.attestation.Constants.KM_TAG_ATTESTATION_ID_MEID;
 import static com.google.android.attestation.Constants.KM_TAG_ATTESTATION_ID_MODEL;
 import static com.google.android.attestation.Constants.KM_TAG_ATTESTATION_ID_PRODUCT;
+import static com.google.android.attestation.Constants.KM_TAG_ATTESTATION_ID_SECOND_IMEI;
 import static com.google.android.attestation.Constants.KM_TAG_ATTESTATION_ID_SERIAL;
 import static com.google.android.attestation.Constants.KM_TAG_AUTH_TIMEOUT;
 import static com.google.android.attestation.Constants.KM_TAG_BOOT_PATCH_LEVEL;
 import static com.google.android.attestation.Constants.KM_TAG_CREATION_DATE_TIME;
 import static com.google.android.attestation.Constants.KM_TAG_DEVICE_UNIQUE_ATTESTATION;
+import static com.google.android.attestation.Constants.KM_TAG_IDENTITY_CREDENTIAL_KEY;
 import static com.google.android.attestation.Constants.KM_TAG_DIGEST;
 import static com.google.android.attestation.Constants.KM_TAG_EC_CURVE;
 import static com.google.android.attestation.Constants.KM_TAG_KEY_SIZE;
@@ -66,6 +68,8 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
+import com.google.common.collect.ImmutableSet;
 import org.bouncycastle.asn1.ASN1Encodable;
 import org.bouncycastle.asn1.ASN1EncodableVector;
 import org.bouncycastle.asn1.ASN1Integer;
@@ -128,12 +132,14 @@ public class AuthorizationList {
   public final Optional<byte[]> attestationIdProduct;
   public final Optional<byte[]> attestationIdSerial;
   public final Optional<byte[]> attestationIdImei;
+  public final Optional<byte[]> attestationIdSecondImei;
   public final Optional<byte[]> attestationIdMeid;
   public final Optional<byte[]> attestationIdManufacturer;
   public final Optional<byte[]> attestationIdModel;
   public final Optional<Integer> vendorPatchLevel;
   public final Optional<Integer> bootPatchLevel;
   public final boolean individualAttestation;
+  public final boolean identityCredentialKey;
 
   private AuthorizationList(ASN1Encodable[] authorizationList, int attestationVersion) {
     Map<Integer, ASN1Primitive> authorizationMap = getAuthorizationMap(authorizationList);
@@ -206,6 +212,8 @@ public class AuthorizationList {
         findOptionalByteArrayAuthorizationListEntry(authorizationMap, KM_TAG_ATTESTATION_ID_SERIAL);
     this.attestationIdImei =
         findOptionalByteArrayAuthorizationListEntry(authorizationMap, KM_TAG_ATTESTATION_ID_IMEI);
+    this.attestationIdSecondImei =
+            findOptionalByteArrayAuthorizationListEntry(authorizationMap, KM_TAG_ATTESTATION_ID_SECOND_IMEI);
     this.attestationIdMeid =
         findOptionalByteArrayAuthorizationListEntry(authorizationMap, KM_TAG_ATTESTATION_ID_MEID);
     this.attestationIdManufacturer =
@@ -219,6 +227,9 @@ public class AuthorizationList {
         findOptionalIntegerAuthorizationListEntry(authorizationMap, KM_TAG_BOOT_PATCH_LEVEL);
     this.individualAttestation =
         findBooleanAuthorizationListEntry(authorizationMap, KM_TAG_DEVICE_UNIQUE_ATTESTATION);
+    this.identityCredentialKey =
+        findBooleanAuthorizationListEntry(authorizationMap, KM_TAG_IDENTITY_CREDENTIAL_KEY);
+
   }
 
   private AuthorizationList(Builder builder) {
@@ -255,12 +266,14 @@ public class AuthorizationList {
     this.attestationIdProduct = Optional.ofNullable(builder.attestationIdProduct);
     this.attestationIdSerial = Optional.ofNullable(builder.attestationIdSerial);
     this.attestationIdImei = Optional.ofNullable(builder.attestationIdImei);
+    this.attestationIdSecondImei = Optional.ofNullable(builder.attestationIdSecondImei);
     this.attestationIdMeid = Optional.ofNullable(builder.attestationIdMeid);
     this.attestationIdManufacturer = Optional.ofNullable(builder.attestationIdManufacturer);
     this.attestationIdModel = Optional.ofNullable(builder.attestationIdModel);
     this.vendorPatchLevel = Optional.ofNullable(builder.vendorPatchLevel);
     this.bootPatchLevel = Optional.ofNullable(builder.bootPatchLevel);
     this.individualAttestation = builder.individualAttestation;
+    this.identityCredentialKey = builder.identityCredentialKey;
   }
 
   static AuthorizationList createAuthorizationList(
@@ -340,7 +353,7 @@ public class AuthorizationList {
   // Visible for testing.
   static Set<UserAuthType> userAuthTypeToEnum(long userAuthType) {
     if (userAuthType == 0) {
-      return Set.of(USER_AUTH_TYPE_NONE);
+      return ImmutableSet.of(USER_AUTH_TYPE_NONE);
     }
 
     Set<UserAuthType> result = new HashSet<>();
@@ -367,7 +380,7 @@ public class AuthorizationList {
       return 0L;
     }
 
-    Long result = 0L;
+    long result = 0L;
 
     for (UserAuthType type : userAuthType) {
       switch (type) {
@@ -427,6 +440,7 @@ public class AuthorizationList {
     addOptionalOctetString(KM_TAG_ATTESTATION_ID_PRODUCT, this.attestationIdProduct, vector);
     addOptionalOctetString(KM_TAG_ATTESTATION_ID_SERIAL, this.attestationIdSerial, vector);
     addOptionalOctetString(KM_TAG_ATTESTATION_ID_IMEI, this.attestationIdImei, vector);
+    addOptionalOctetString(KM_TAG_ATTESTATION_ID_SECOND_IMEI, this.attestationIdSecondImei, vector);
     addOptionalOctetString(KM_TAG_ATTESTATION_ID_MEID, this.attestationIdMeid, vector);
     addOptionalOctetString(
         KM_TAG_ATTESTATION_ID_MANUFACTURER, this.attestationIdManufacturer, vector);
@@ -543,200 +557,258 @@ public class AuthorizationList {
     byte[] attestationIdProduct;
     byte[] attestationIdSerial;
     byte[] attestationIdImei;
+    byte[] attestationIdSecondImei;
     byte[] attestationIdMeid;
     byte[] attestationIdManufacturer;
     byte[] attestationIdModel;
     Integer vendorPatchLevel;
     Integer bootPatchLevel;
     boolean individualAttestation;
+    boolean identityCredentialKey;
 
+    @CanIgnoreReturnValue
     public Builder setPurpose(Set<Integer> purpose) {
       this.purpose = purpose;
       return this;
     }
 
+    @CanIgnoreReturnValue
     public Builder setAlgorithm(Integer algorithm) {
       this.algorithm = algorithm;
       return this;
     }
 
+    @CanIgnoreReturnValue
     public Builder setKeySize(Integer keySize) {
       this.keySize = keySize;
       return this;
     }
 
+    @CanIgnoreReturnValue
     public Builder setDigest(Set<Integer> digest) {
       this.digest = digest;
       return this;
     }
 
+    @CanIgnoreReturnValue
     public Builder setPadding(Set<Integer> padding) {
       this.padding = padding;
       return this;
     }
 
+    @CanIgnoreReturnValue
     public Builder setEcCurve(Integer ecCurve) {
       this.ecCurve = ecCurve;
       return this;
     }
 
+    @CanIgnoreReturnValue
     public Builder setRsaPublicExponent(Long rsaPublicExponent) {
       this.rsaPublicExponent = rsaPublicExponent;
       return this;
     }
 
+    @CanIgnoreReturnValue
     public Builder setRollbackResistance(boolean rollbackResistance) {
       this.rollbackResistance = rollbackResistance;
       return this;
     }
 
+    @CanIgnoreReturnValue
     public Builder setActiveDateTime(Instant activeDateTime) {
       this.activeDateTime = activeDateTime;
       return this;
     }
 
+    @CanIgnoreReturnValue
     public Builder setOriginationExpireDateTime(Instant originationExpireDateTime) {
       this.originationExpireDateTime = originationExpireDateTime;
       return this;
     }
 
+    @CanIgnoreReturnValue
     public Builder setUsageExpireDateTime(Instant usageExpireDateTime) {
       this.usageExpireDateTime = usageExpireDateTime;
       return this;
     }
 
+    @CanIgnoreReturnValue
     public Builder setNoAuthRequired(boolean noAuthRequired) {
       this.noAuthRequired = noAuthRequired;
       return this;
     }
 
+    @CanIgnoreReturnValue
     public Builder setUserAuthType(Set<UserAuthType> userAuthType) {
       this.userAuthType = userAuthType;
       return this;
     }
 
+    @CanIgnoreReturnValue
     public Builder setAuthTimeout(Duration authTimeout) {
       this.authTimeout = authTimeout;
       return this;
     }
 
+    @CanIgnoreReturnValue
     public Builder setAllowWhileOnBody(boolean allowWhileOnBody) {
       this.allowWhileOnBody = allowWhileOnBody;
       return this;
     }
 
+    @CanIgnoreReturnValue
     public Builder setTrustedUserPresenceRequired(boolean trustedUserPresenceRequired) {
       this.trustedUserPresenceRequired = trustedUserPresenceRequired;
       return this;
     }
 
+    @CanIgnoreReturnValue
     public Builder setTrustedConfirmationRequired(boolean trustedConfirmationRequired) {
       this.trustedConfirmationRequired = trustedConfirmationRequired;
       return this;
     }
 
+    @CanIgnoreReturnValue
     public Builder setUnlockedDeviceRequired(boolean unlockedDeviceRequired) {
       this.unlockedDeviceRequired = unlockedDeviceRequired;
       return this;
     }
 
+    @CanIgnoreReturnValue
     public Builder setAllApplications(boolean allApplications) {
       this.allApplications = allApplications;
       return this;
     }
 
+    @CanIgnoreReturnValue
     public Builder setApplicationId(byte[] applicationId) {
       this.applicationId = applicationId;
       return this;
     }
 
+    @CanIgnoreReturnValue
     public Builder setCreationDateTime(Instant creationDateTime) {
       this.creationDateTime = creationDateTime;
       return this;
     }
 
+    @CanIgnoreReturnValue
     public Builder setOrigin(Integer origin) {
       this.origin = origin;
       return this;
     }
 
+    @CanIgnoreReturnValue
     public Builder setRollbackResistant(boolean rollbackResistant) {
       this.rollbackResistant = rollbackResistant;
       return this;
     }
 
+    @CanIgnoreReturnValue
     public Builder setRootOfTrust(RootOfTrust rootOfTrust) {
       this.rootOfTrust = rootOfTrust;
       return this;
     }
 
+    @CanIgnoreReturnValue
     public Builder setOsVersion(Integer osVersion) {
       this.osVersion = osVersion;
       return this;
     }
 
+    @CanIgnoreReturnValue
     public Builder setOsPatchLevel(Integer osPatchLevel) {
       this.osPatchLevel = osPatchLevel;
       return this;
     }
 
+    @CanIgnoreReturnValue
     public Builder setAttestationApplicationId(AttestationApplicationId attestationApplicationId) {
       this.attestationApplicationId = attestationApplicationId;
       return this;
     }
 
+    @CanIgnoreReturnValue
     public Builder setAttestationApplicationIdBytes(byte[] attestationApplicationIdBytes) {
       this.attestationApplicationIdBytes = attestationApplicationIdBytes;
       return this;
     }
 
+    @CanIgnoreReturnValue
     public Builder setAttestationIdBrand(byte[] attestationIdBrand) {
       this.attestationIdBrand = attestationIdBrand;
       return this;
     }
 
+    @CanIgnoreReturnValue
+    public Builder setAttestationIdDevice(byte[] attestationIdDevice) {
+      this.attestationIdDevice = attestationIdDevice;
+      return this;
+    }
+
+    @CanIgnoreReturnValue
     public Builder setAttestationIdProduct(byte[] attestationIdProduct) {
       this.attestationIdProduct = attestationIdProduct;
       return this;
     }
 
+    @CanIgnoreReturnValue
     public Builder setAttestationIdSerial(byte[] attestationIdSerial) {
       this.attestationIdSerial = attestationIdSerial;
       return this;
     }
 
+    @CanIgnoreReturnValue
     public Builder setAttestationIdImei(byte[] attestationIdImei) {
       this.attestationIdImei = attestationIdImei;
       return this;
     }
 
+    @CanIgnoreReturnValue
+    public Builder setAttestationIdSecondImei(byte[] attestationIdSecondImei) {
+      this.attestationIdSecondImei = attestationIdSecondImei;
+      return this;
+    }
+
+    @CanIgnoreReturnValue
     public Builder setAttestationIdMeid(byte[] attestationIdMeid) {
       this.attestationIdMeid = attestationIdMeid;
       return this;
     }
 
+    @CanIgnoreReturnValue
     public Builder setAttestationIdManufacturer(byte[] attestationIdManufacturer) {
       this.attestationIdManufacturer = attestationIdManufacturer;
       return this;
     }
 
+    @CanIgnoreReturnValue
     public Builder setAttestationIdModel(byte[] attestationIdModel) {
       this.attestationIdModel = attestationIdModel;
       return this;
     }
 
+    @CanIgnoreReturnValue
     public Builder setVendorPatchLevel(Integer vendorPatchLevel) {
       this.vendorPatchLevel = vendorPatchLevel;
       return this;
     }
 
+    @CanIgnoreReturnValue
     public Builder setBootPatchLevel(Integer bootPatchLevel) {
       this.bootPatchLevel = bootPatchLevel;
       return this;
     }
 
+    @CanIgnoreReturnValue
     public Builder setIndividualAttestation(boolean individualAttestation) {
       this.individualAttestation = individualAttestation;
+      return this;
+    }
+
+    @CanIgnoreReturnValue
+    public Builder setIdentityCredentialKey(boolean identityCredentialKey) {
+      this.identityCredentialKey = identityCredentialKey;
       return this;
     }
 
