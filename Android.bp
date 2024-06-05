@@ -37,6 +37,8 @@ java_library_static {
     visibility: [
         "//cts/tests/tests/keystore",
         "//cts/common/device-side/device-info",
+        "//packages/apps/DeviceDiagnostics/app/src/main",
+        "//packages/apps/DeviceDiagnostics/DeviceDiagnosticsLib/src/main",
     ],
     min_sdk_version: "31",
     dxflags: ["--multi-dex"],
@@ -45,8 +47,10 @@ java_library_static {
     sdk_version: "current",
     static_libs: [
         "bouncycastle-unbundled",
+        "error_prone_annotations",
+        "guava",
     ],
     libs: [
-        "wycheproof-gson",
+        "gson",
     ],
 }
